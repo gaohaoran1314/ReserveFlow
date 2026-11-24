@@ -1,0 +1,1 @@
+import{D as e}from"./index-L6iQtqGy.js";const n=()=>e.get("/health/deps"),r=()=>e.post("/admin/jobs/maintenance"),o=s=>e.get("/admin/users",{params:s}),p=s=>e.post(`/admin/users/${s}/approve`,{}),c=(s,t)=>e.post(`/admin/users/${s}/reject`,{reason:t||""});export{p as a,r as b,n as g,o as l,c as r};

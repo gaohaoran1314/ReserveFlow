@@ -1,0 +1,1 @@
+import{D as e}from"./index-L6iQtqGy.js";const r=s=>e.get("/resources",{params:s}),c=s=>e.post("/resources",s),a=(s,t)=>e.put(`/resources/${s}`,t),u=(s,t)=>e.patch(`/resources/${s}/status`,{status:t}),p=s=>e.delete(`/resources/${s}`),n=()=>e.get("/resources/meta"),g=(s,t)=>e.get(`/resources/${s}/slots`,{params:{date:t}});export{g as a,c,n as g,r as l,u as p,p as r,a as u};

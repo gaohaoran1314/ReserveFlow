@@ -1,0 +1,277 @@
+/* =============================================================================
+   全局样式：只放「重置 + 布局变量 + 少量自定义块」，其余交给 Element Plus。
+   刻意不引入 Tailwind：与 Element Plus 的样式优先级冲突，收益低于成本。
+   ============================================================================= */
+
+:root {
+  --rf-bg: #f5f7fa;
+  --rf-card-bg: #ffffff;
+  --rf-border: #e4e7ed;
+  --rf-text: #303133;
+  --rf-text-secondary: #909399;
+  --rf-sidebar-bg: #1f2d3d;
+  --rf-sidebar-active: #409eff;
+  --rf-header-h: 56px;
+  --rf-sidebar-w: 208px;
+  --rf-sidebar-w-collapsed: 64px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei',
+    'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  color: var(--rf-text);
+  background: var(--rf-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 最小 1280 宽：再窄就横向滚动，不畸形压缩 */
+.rf-app {
+  min-width: 1280px;
+  min-height: 100%;
+}
+
+/* ---------------- 布局 ---------------- */
+.rf-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.rf-sidebar {
+  width: var(--rf-sidebar-w);
+  flex: 0 0 var(--rf-sidebar-w);
+  background: var(--rf-sidebar-bg);
+  color: #bfcbd9;
+  transition: width 0.2s, flex-basis 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+
+.rf-sidebar.is-collapsed {
+  width: var(--rf-sidebar-w-collapsed);
+  flex-basis: var(--rf-sidebar-w-collapsed);
+}
+
+.rf-brand {
+  height: var(--rf-header-h);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.rf-brand .el-icon {
+  font-size: 20px;
+  flex: 0 0 auto;
+}
+
+.rf-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.rf-header {
+  height: var(--rf-header-h);
+  flex: 0 0 var(--rf-header-h);
+  background: #fff;
+  border-bottom: 1px solid var(--rf-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+}
+
+.rf-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.rf-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rf-content {
+  flex: 1 1 auto;
+  padding: 16px;
+  overflow: auto;
+}
+
+.rf-page-card {
+  background: var(--rf-card-bg);
+  border: 1px solid var(--rf-border);
+  border-radius: 4px;
+  padding: 16px;
+}
+
+/* ---------------- 页面头 ---------------- */
+.rf-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.rf-page-header h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.rf-page-header .rf-desc {
+  color: var(--rf-text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* ---------------- 7 天趋势柱状（D-P4-2：纯 CSS，不引 ECharts） ---------------- */
+.rf-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  height: 160px;
+  padding: 8px 4px 0;
+}
+
+.rf-chart-col {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  gap: 6px;
+}
+
+.rf-chart-bar {
+  width: 100%;
+  max-width: 56px;
+  background: linear-gradient(180deg, #79bbff, #409eff);
+  border-radius: 3px 3px 0 0;
+  min-height: 2px;
+  transition: height 0.3s;
+}
+
+.rf-chart-val {
+  font-size: 12px;
+  color: var(--rf-text);
+}
+
+.rf-chart-label {
+  font-size: 12px;
+  color: var(--rf-text-secondary);
+}
+
+/* ---------------- 时间线 ---------------- */
+.rf-timeline-node {
+  display: flex;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--rf-border);
+}
+
+.rf-timeline-node:last-child {
+  border-bottom: none;
+}
+
+.rf-timeline-time {
+  flex: 0 0 148px;
+  color: var(--rf-text-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.rf-mono {
+  font-family: Consolas, Monaco, 'Courier New', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.rf-muted {
+  color: var(--rf-text-secondary);
+}
+
+.rf-dev-warn {
+  margin: 8px 0;
+  padding: 6px 10px;
+  border-left: 3px solid #e6a23c;
+  background: #fdf6ec;
+  color: #b88230;
+  font-size: 12px;
+  border-radius: 2px;
+}
+
+.rf-empty-block {
+  padding: 28px 0;
+}
+
+.rf-stat-card .rf-stat-value {
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.rf-stat-card .rf-stat-label {
+  color: var(--rf-text-secondary);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.rf-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 6px;
+}
+
+.rf-slot-cell {
+  height: 42px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--rf-border);
+  border-radius: 3px;
+  font-size: 11px;
+  color: var(--rf-text-secondary);
+  cursor: pointer;
+  user-select: none;
+  background: #fff;
+}
+
+.rf-slot-cell.is-occupied {
+  background: #fef0f0;
+  border-color: #fbc4c4;
+  color: #f56c6c;
+  cursor: not-allowed;
+}
+
+.rf-slot-cell.is-selected {
+  background: #ecf5ff;
+  border-color: #409eff;
+  color: #409eff;
+}

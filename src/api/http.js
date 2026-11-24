@@ -1,19 +1,18 @@
 // =============================================================================
-// src/api/http.js  —  Axios 实例与唯一错误出口
-// 对应 ARCH-P4 §3.2 / §3.3 / D-P4-4
+// src/api/http.js  —  H5 版 Axios 实例与唯一错误出口
 //
-// 两条纪律：
-//   1) **只判 code，不判 HTTP 状态**（后端 D-6：业务错误一律 HTTP 200 + code≠0）；
-//      唯一例外是 401（令牌失效）与 403（权限不足），这两种是鉴权层的真实状态码。
-//   2) 调用方不写 try/catch、不弹提示 —— 失败提示统一在这里做，
-//      调用方只关心 `await xxx()` 拿到 data 或 catch 到 `{code,msg}`。
+// 结构与 front/admin/src/api/http.js 完全同构，只换提示层：
+//   ElMessage.error  →  showFailToast（移动端更合适：居中、2 秒、不挡 TabBar）
 //
-// 刻意不 import store / router（会形成环形依赖）：
-//   · token 直接从 localStorage 读（与 auth store 共用 constants/storage.js 的键名）
-//   · 401 后的跳转由 main.js 通过 setUnauthorizedHandler() 注入
+// 三条纪律（与 P4 一致）：
+//   1) 只判 code，不判 HTTP 状态（后端 D-6：业务错误一律 HTTP 200 + code≠0）；
+//      例外是 401（令牌失效）与 403（权限不足）。
+//   2) 调用方不写 try/catch 弹提示 —— 全部在这里做。
+//   3) 不 import store / router（避免循环依赖）：token 从 localStorage 读，
+//      401 后的跳转由 main.js 用 setUnauthorizedHandler 注入。
 // =============================================================================
 import axios from 'axios'
-import { ElMessage } from 'element-plus'
+import { showDialog, showFailToast } from 'vant'
 
 import { TOKEN_KEY, USER_KEY } from '../constants/storage'
 import { SPECIAL_CODE } from '../constants/errorCode'
@@ -24,13 +23,13 @@ const http = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-/** 401 之后的跳转动作，由 main.js 注入（避免 http.js 依赖 router） */
+/** 401 之后的跳转动作，由 main.js 注入 */
 let unauthorizedHandler = null
 export function setUnauthorizedHandler(fn) {
   unauthorizedHandler = fn
 }
 
-/** 供调用方在特殊码（3005/3007 等）时做额外动作后重新抛出 */
+/** 业务错误对象：页面可以 catch 到 code 做额外动作 */
 export class BusinessError extends Error {
   constructor(code, msg, data) {
     super(msg)
@@ -38,6 +37,21 @@ export class BusinessError extends Error {
     this.msg = msg
     this.data = data
     this.business = true
+  }
+}
+
+/**
+ * 统一呈现：需要用户知晓的用 Dialog，其余用 Toast（ARCH-P5 §8）
+ * @param {number} code
+ * @param {string} msg 后端给的中文
+ */
+function present(code, msg) {
+  const special = SPECIAL_CODE[code]
+  const text = special?.tip || msg || '操作失败'
+  if (special?.present === 'dialog') {
+    showDialog({ title: '提示', message: text, confirmButtonText: '知道了' }).catch(() => {})
+  } else {
+    showFailToast(text)
   }
 }
 
@@ -54,61 +68,55 @@ http.interceptors.request.use((cfg) => {
 http.interceptors.response.use(
   (res) => {
     const body = res.data
-    // 业务成功：直接把 data 交给调用方（调用方不需要再解一层）
+    // 业务成功：直接把 data 交给调用方
     if (body && body.code === 0) {
       return body.data
     }
-
-    // 业务失败：HTTP 200 + code≠0
     const code = body?.code ?? -1
     const msg = body?.msg || '请求失败'
-    ElMessage.error(msg)
+    // silent：调用方自己按码分流提示（如注册页 2003/2004/1000 三种文案各不相同）
+    // —— 这是 opt-in 的，其它接口行为不变
+    if (!res.config?.silent) {
+      present(code, msg)
+    }
     return Promise.reject(new BusinessError(code, msg, body?.data))
   },
   (err) => {
     const status = err.response?.status
     const body = err.response?.data
 
-    // ---- 令牌失效：清干净并跳登录 ----
+    // 令牌失效 → 清 token 并跳登录
     if (status === 401) {
       localStorage.removeItem(TOKEN_KEY)
       localStorage.removeItem(USER_KEY)
-      if (typeof unauthorizedHandler === 'function') {
-        unauthorizedHandler(body?.msg || '登录已失效，请重新登录')
-      } else {
-        ElMessage.warning(body?.msg || '登录已失效，请重新登录')
-      }
+      showFailToast(body?.msg || '登录已失效，请重新登录')
+      if (typeof unauthorizedHandler === 'function') unauthorizedHandler()
       return Promise.reject(new BusinessError(body?.code ?? 1001, '登录已失效'))
     }
 
-    // ---- 权限不足：只提示，不跳转（跳登录会误导成"密码错了"） ----
     if (status === 403) {
-      ElMessage.error(body?.msg || '权限不足，需要管理员角色')
-      return Promise.reject(new BusinessError(body?.code ?? 1004, '权限不足'))
+      showFailToast(body?.msg || '无权访问')
+      return Promise.reject(new BusinessError(body?.code ?? 1004, '无权访问'))
     }
 
     if (status === 400 || status === 404 || status === 405) {
-      ElMessage.error(body?.msg || `请求异常（HTTP ${status}）`)
+      showFailToast(body?.msg || `请求异常（HTTP ${status}）`)
       return Promise.reject(new BusinessError(body?.code ?? -1, body?.msg || `HTTP ${status}`))
     }
 
-    // ---- 连接类错误：联调第一坑 ----
     if (err.code === 'ECONNABORTED') {
-      ElMessage.error('请求超时，请检查后端服务是否正常')
+      showFailToast('请求超时，请检查网络')
     } else if (!err.response) {
-      ElMessage.error('无法连接后端服务（127.0.0.1:8080），请确认已启动 reserveflow.exe')
+      showFailToast('无法连接服务器，请稍后重试')
     } else {
-      ElMessage.error(body?.msg || `服务异常（HTTP ${status}）`)
+      showFailToast(body?.msg || `服务异常（HTTP ${status}）`)
     }
     return Promise.reject(new BusinessError(body?.code ?? -1, body?.msg || String(err.message)))
   }
 )
 
-/**
- * 判断某个错误码是否需要页面做额外动作（刷新时间轴 / 重拉详情等）。
- * 页面用法：`catch (e) { if (needAction(e.code)) { ... } }`
- */
-export function specialActionOf(code) {
+/** 取某个错误码的额外动作（页面用：catch(e){ if (specialOf(e.code)?.action === 'refreshSlots') ... }） */
+export function specialOf(code) {
   return SPECIAL_CODE[code] || null
 }
 

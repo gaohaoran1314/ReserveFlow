@@ -1,0 +1,24 @@
+{
+  "name": "reserveflow-h5",
+  "version": "0.5.0",
+  "private": true,
+  "type": "module",
+  "description": "ReserveFlow 学生端 H5（Vue3 + Vant 4）",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "node scripts/mobile-check.mjs"
+  },
+  "dependencies": {
+    "axios": "1.21.1",
+    "pinia": "3.0.4",
+    "vant": "4.10.2",
+    "vue": "3.5.46",
+    "vue-router": "4.6.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "6.0.11",
+    "vite": "7.3.8"
+  }
+}
