@@ -1,209 +1,131 @@
 /* =============================================================================
-   全局样式：只放「重置 + 布局变量 + 少量自定义块」，其余交给 Element Plus。
-   刻意不引入 Tailwind：与 Element Plus 的样式优先级冲突，收益低于成本。
+   H5 全局样式：移动优先（375 基准），只放重置 + 卡片/网格等少量自定义块，
+   组件样式交给 Vant。
    ============================================================================= */
 
 :root {
-  --rf-bg: #f5f7fa;
+  --rf-bg: #f7f8fa;
   --rf-card-bg: #ffffff;
-  --rf-border: #e4e7ed;
-  --rf-text: #303133;
-  --rf-text-secondary: #909399;
-  --rf-sidebar-bg: #1f2d3d;
-  --rf-sidebar-active: #409eff;
-  --rf-header-h: 56px;
-  --rf-sidebar-w: 208px;
-  --rf-sidebar-w-collapsed: 64px;
+  --rf-text: #323233;
+  --rf-text-2: #969799;
+  --rf-primary: #1989fa;
+  --rf-danger: #ee0a24;
+  --rf-warning: #ff976a;
+  --rf-success: #07c160;
+  /* 安全区：iPhone 底部小黑条 */
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
 }
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
 body,
 #app {
-  height: 100%;
   margin: 0;
   padding: 0;
+  min-height: 100%;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei',
-    'Helvetica Neue', Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', Helvetica,
+    'Microsoft YaHei', Arial, sans-serif;
   font-size: 14px;
   color: var(--rf-text);
   background: var(--rf-bg);
   -webkit-font-smoothing: antialiased;
 }
 
-/* 最小 1280 宽：再窄就横向滚动，不畸形压缩 */
-.rf-app {
-  min-width: 1280px;
-  min-height: 100%;
-}
-
-/* ---------------- 布局 ---------------- */
-.rf-layout {
-  display: flex;
+/* 页面容器：底部给 TabBar + 安全区留出空间（van-tabbar 的 placeholder 已撑高，
+   这里只兜底，避免页面内容贴边） */
+.rf-h5 {
   min-height: 100vh;
+  background: var(--rf-bg);
 }
 
-.rf-sidebar {
-  width: var(--rf-sidebar-w);
-  flex: 0 0 var(--rf-sidebar-w);
-  background: var(--rf-sidebar-bg);
-  color: #bfcbd9;
-  transition: width 0.2s, flex-basis 0.2s;
-  display: flex;
-  flex-direction: column;
+.rf-page {
+  padding: 12px;
+  padding-bottom: 16px;
 }
 
-.rf-sidebar.is-collapsed {
-  width: var(--rf-sidebar-w-collapsed);
-  flex-basis: var(--rf-sidebar-w-collapsed);
+.rf-page-flush {
+  padding: 0;
 }
 
-.rf-brand {
-  height: var(--rf-header-h);
+/* ---------------- 卡片 ---------------- */
+.rf-card {
+  background: var(--rf-card-bg);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.rf-card.is-disabled {
+  opacity: 0.55;
+}
+
+.rf-card-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 16px;
-  color: #fff;
-  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+.rf-card-title {
+  font-size: 15px;
   font-weight: 600;
-  letter-spacing: 0.5px;
-  white-space: nowrap;
+  line-height: 1.35;
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.rf-brand .el-icon {
-  font-size: 20px;
-  flex: 0 0 auto;
-}
-
-.rf-main {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.rf-header {
-  height: var(--rf-header-h);
-  flex: 0 0 var(--rf-header-h);
-  background: #fff;
-  border-bottom: 1px solid var(--rf-border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-}
-
-.rf-header-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
-.rf-header-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.rf-content {
-  flex: 1 1 auto;
-  padding: 16px;
-  overflow: auto;
-}
-
-.rf-page-card {
-  background: var(--rf-card-bg);
-  border: 1px solid var(--rf-border);
-  border-radius: 4px;
-  padding: 16px;
-}
-
-/* ---------------- 页面头 ---------------- */
-.rf-page-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 12px;
-}
-
-.rf-page-header h2 {
-  margin: 0 0 4px;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.rf-page-header .rf-desc {
-  color: var(--rf-text-secondary);
-  font-size: 13px;
+.rf-card-sub {
+  font-size: 12px;
+  color: var(--rf-text-2);
   line-height: 1.6;
 }
 
-/* ---------------- 7 天趋势柱状（D-P4-2：纯 CSS，不引 ECharts） ---------------- */
-.rf-chart {
+.rf-card-foot {
   display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  height: 160px;
-  padding: 8px 4px 0;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f2f3f5;
 }
 
-.rf-chart-col {
-  flex: 1 1 0;
+.rf-emoji {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.rf-row {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  height: 100%;
   gap: 6px;
 }
 
-.rf-chart-bar {
-  width: 100%;
-  max-width: 56px;
-  background: linear-gradient(180deg, #79bbff, #409eff);
-  border-radius: 3px 3px 0 0;
-  min-height: 2px;
-  transition: height 0.3s;
-}
-
-.rf-chart-val {
-  font-size: 12px;
-  color: var(--rf-text);
-}
-
-.rf-chart-label {
-  font-size: 12px;
-  color: var(--rf-text-secondary);
-}
-
-/* ---------------- 时间线 ---------------- */
-.rf-timeline-node {
+.rf-row-between {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  padding: 6px 0;
-  border-bottom: 1px dashed var(--rf-border);
 }
 
-.rf-timeline-node:last-child {
-  border-bottom: none;
+.rf-grow {
+  flex: 1;
+  min-width: 0;
 }
 
-.rf-timeline-time {
-  flex: 0 0 148px;
-  color: var(--rf-text-secondary);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
+.rf-muted {
+  color: var(--rf-text-2);
 }
 
 .rf-mono {
@@ -211,67 +133,106 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-.rf-muted {
-  color: var(--rf-text-secondary);
+.rf-nowrap {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.rf-dev-warn {
-  margin: 8px 0;
-  padding: 6px 10px;
-  border-left: 3px solid #e6a23c;
-  background: #fdf6ec;
-  color: #b88230;
+/* ---------------- 吸底操作条 ---------------- */
+.rf-bottom-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 99;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px calc(10px + var(--safe-bottom));
+  background: #fff;
+  border-top: 1px solid #ebedf0;
+}
+
+.rf-bottom-bar .rf-bottom-info {
+  flex: 1;
+  min-width: 0;
   font-size: 12px;
-  border-radius: 2px;
+  color: var(--rf-text-2);
+  line-height: 1.5;
 }
 
-.rf-empty-block {
-  padding: 28px 0;
-}
-
-.rf-stat-card .rf-stat-value {
-  font-size: 26px;
-  font-weight: 600;
-  line-height: 1.2;
-  font-variant-numeric: tabular-nums;
-}
-
-.rf-stat-card .rf-stat-label {
-  color: var(--rf-text-secondary);
-  font-size: 13px;
-  margin-top: 4px;
-}
-
+/* ---------------- 时段网格（T06 用，样式先落地） ---------------- */
 .rf-slot-grid {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
 }
 
 .rf-slot-cell {
-  height: 42px;
+  height: 46px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--rf-border);
-  border-radius: 3px;
-  font-size: 11px;
-  color: var(--rf-text-secondary);
-  cursor: pointer;
-  user-select: none;
+  border: 1px solid #ebedf0;
+  border-radius: 6px;
   background: #fff;
+  font-size: 12px;
+  color: var(--rf-text);
+  user-select: none;
+}
+
+.rf-slot-cell .rf-slot-tip {
+  font-size: 10px;
+  color: var(--rf-text-2);
+  margin-top: 2px;
 }
 
 .rf-slot-cell.is-occupied {
-  background: #fef0f0;
-  border-color: #fbc4c4;
-  color: #f56c6c;
-  cursor: not-allowed;
+  background: #f7f8fa;
+  color: #c8c9cc;
+  border-color: #ebedf0;
+}
+
+.rf-slot-cell.is-past {
+  background: #f7f8fa;
+  color: #c8c9cc;
 }
 
 .rf-slot-cell.is-selected {
-  background: #ecf5ff;
-  border-color: #409eff;
-  color: #409eff;
+  background: #e8f3ff;
+  border-color: var(--rf-primary);
+  color: var(--rf-primary);
+}
+
+.rf-slot-cell.is-edge {
+  border-width: 2px;
+}
+
+/* ---------------- 空态 ---------------- */
+.rf-empty {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--rf-text-2);
+}
+
+.rf-empty .rf-empty-icon {
+  font-size: 44px;
+  line-height: 1;
+  margin-bottom: 10px;
+}
+
+.rf-empty .rf-empty-text {
+  font-size: 14px;
+  margin-bottom: 14px;
+}
+
+/* ---------------- 详情弹层里的分组标题 ---------------- */
+.rf-section-title {
+  margin: 14px 0 8px;
+  padding-left: 8px;
+  border-left: 3px solid var(--rf-primary);
+  font-size: 13px;
+  font-weight: 600;
 }

@@ -1,10 +1,14 @@
 // =============================================================================
-// localStorage 键名集中定义
-// 为什么单独一个文件：http.js 需要读 token，auth store 需要读写 token；
-// 若 http.js 直接 import store 会形成 store → api → http → store 的环形依赖。
-// 把「键名」抽出来，两边都只依赖这个常量，环就断了。
+// localStorage 键名（**必须与 admin 不同**）
+//
+// 为什么：两个前端可能部署在同一域名下（localhost:8080/admin 与 /h5），
+// localStorage 是同源的。若都用 rf_token，管理员在 /admin 登录后打开 /h5，
+// H5 会读到管理员的 token —— 页面能进，但"我的预约"永远是空的（userId 是管理员）。
+// 这是 P4→P5 最容易出的事故（ARCH-P5 §3.2），必须在第一行就隔离。
 // =============================================================================
 
-export const TOKEN_KEY = 'rf_admin_token'
-export const USER_KEY = 'rf_admin_user'
-export const SIDEBAR_KEY = 'rf_admin_sidebar_collapsed'
+export const TOKEN_KEY = 'rf_h5_token' // admin 用 'rf_admin_token'
+export const USER_KEY = 'rf_h5_user' // admin 用 'rf_admin_user'
+
+/** P6：上次注册/登录用的学号，登录页自动预填（省得学生再敲一遍） */
+export const LAST_USERNAME_KEY = 'rf_h5_last_username'

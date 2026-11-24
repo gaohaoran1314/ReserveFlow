@@ -1,15 +1,11 @@
 // =============================================================================
-// src/router/guard.js  —  全局前置守卫（ARCH-P4 §2.2）
+// src/router/guard.js  —  前置守卫（ARCH-P5 §2.2）
 //
-// 三条规则：
-//   1) 首次进入先从 localStorage 恢复登录态（F5 不掉登录）
-//   2) 公开页（登录/404）：已登录访问 /login 自动去 /dashboard
-//   3) 受保护页：无 token → /login?redirect=<原路径>；非 ADMIN → 提示后回登录页
-//
-// 刻意**不在守卫里校验 token 是否过期**（不调 /auth/me）：过期令牌由
-// http.js 的 401 拦截器统一踢出，省一次请求，也避免后端抖动时把人误踢。
+// 与 P4 同构，但**不校验 ADMIN**：学生端只要求"已登录"，
+// 管理员用 H5 看数据也允许（产品没要求区分）。
+// 额外拦 DISABLED：禁用账号连登录页都进不去后续页面（登录成功也会被弹回）。
 // =============================================================================
-import { ElMessage } from 'element-plus'
+import { showToast } from 'vant'
 
 import { useAuthStore } from '../stores/auth'
 import { LOCAL_TIP } from '../constants/errorCode'
@@ -18,25 +14,23 @@ export function setupGuard(router) {
   router.beforeEach((to) => {
     const auth = useAuthStore()
 
-    // 1) 刷新后首次进入：恢复本地登录态
+    // 1) 首次进入：从 localStorage 恢复（F5 不掉登录）
     if (!auth.restored) auth.restore()
 
     // 2) 公开页
     if (to.meta?.public) {
-      if (to.name === 'login' && auth.token) {
-        return { name: 'dashboard' }
-      }
+      if (to.name === 'login' && auth.token) return { name: 'home' }
       return true
     }
 
-    // 3) 未登录 → 登录页，并记住原路径
+    // 3) 未登录 → 登录页并记住原路径
     if (!auth.token) {
       return { name: 'login', query: { redirect: to.fullPath } }
     }
 
-    // 4) 非管理员：提示「不是管理员」而不是「密码错误」，避免误导
-    if (auth.role !== 'ADMIN') {
-      ElMessage.error(LOCAL_TIP.notAdmin)
+    // 4) 禁用账号：清登录态并拒绝
+    if (auth.isDisabled) {
+      showToast(LOCAL_TIP.disabled)
       auth.clear()
       return { name: 'login' }
     }

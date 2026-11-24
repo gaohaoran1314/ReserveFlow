@@ -1,35 +1,25 @@
 <template>
-  <div class="rf-empty-block">
-    <el-empty :description="description">
-      <template #image>
-        <el-icon :size="46" style="color: #c0c4cc">
-          <component :is="icon" />
-        </el-icon>
-      </template>
-      <slot />
-    </el-empty>
-    <div
-      v-if="desc"
-      class="rf-muted"
-      style="margin-top: -12px; text-align: center; line-height: 1.8; padding: 0 24px"
-    >
-      {{ desc }}
-    </div>
+  <div class="rf-empty">
+    <div class="rf-empty-icon">{{ icon }}</div>
+    <div class="rf-empty-text">{{ text }}</div>
+    <slot name="action">
+      <van-button v-if="actionText" size="small" type="primary" plain @click="$emit('action')">
+        {{ actionText }}
+      </van-button>
+    </slot>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
-
-// 空态 / 能力缺失提示（列表无数据，或某个后端接口尚未提供时用）
-const props = defineProps({
-  /** 主文案（不传则显示「暂无数据」） */
-  title: { type: String, default: '' },
-  /** 补充说明（可换行，用小号灰字展示） */
-  desc: { type: String, default: '' },
-  /** Element Plus 图标组件名 */
-  icon: { type: String, default: 'InfoFilled' },
+/**
+ * 空态（ARCH-P5 §4）
+ * 用 emoji 当图标：不引入图标库，离线零成本。
+ */
+defineProps({
+  text: { type: String, default: '暂无数据' },
+  icon: { type: String, default: '📭' },
+  actionText: { type: String, default: '' },
 })
 
-const description = computed(() => props.title || '暂无数据')
+defineEmits(['action'])
 </script>

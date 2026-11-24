@@ -1,26 +1,31 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import ElementPlus from 'element-plus'
-import zhCn from 'element-plus/es/locale/lang/zh-cn'
-import * as ElementPlusIconsVue from '@element-plus/icons-vue'
+import Vant from 'vant'
+import 'vant/lib/index.css'
 
-import 'element-plus/dist/index.css'
 import './styles/index.css'
 
 import App from './App.vue'
 import router from './router'
+import { setUnauthorizedHandler } from './api/http'
 
 const app = createApp(App)
 
-// 图标全量注册（离线可用：全部来自依赖包内的 SVG，无 CDN）
-for (const [name, comp] of Object.entries(ElementPlusIconsVue)) {
-  app.component(name, comp)
-}
-
-// 顺序很重要：pinia 必须先于 router 安装，
-// 否则 router 守卫里第一次 useAuthStore() 会拿不到 active pinia 而报错
+// pinia 必须先于 router：守卫里第一次 useAuthStore() 需要 active pinia
 app.use(createPinia())
 app.use(router)
-app.use(ElementPlus, { locale: zhCn })
+// Vant 全量注册（产物 ~500KB，移动端首屏可接受；离线可用，无 CDN）
+app.use(Vant)
+
+/**
+ * 401 后的跳转由这里注入（http.js 不 import router，避免循环依赖）
+ * 与 admin 版完全同构，只是跳转目标是 H5 的 /login
+ */
+setUnauthorizedHandler(() => {
+  const cur = router.currentRoute.value
+  if (cur.name !== 'login') {
+    router.replace({ name: 'login', query: { redirect: cur.fullPath } })
+  }
+})
 
 app.mount('#app')

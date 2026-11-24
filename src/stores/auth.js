@@ -1,12 +1,10 @@
 // =============================================================================
-// src/stores/auth.js  —  登录态（token + user，落 localStorage）
-// 对应 ARCH-P4 §4
+// src/stores/auth.js  —  登录态（与 admin 版同构，只换 storage key）
 //
-// 三条要点：
-//   1) restore() 幂等，只跑一次；**不在守卫里校验 token 有效性**（不调 /auth/me），
-//      过期令牌由 http.js 的 401 拦截器统一踢出（少一次请求、后端故障时也不会误踢）；
-//   2) login() 成功后同时写内存与 localStorage，F5 刷新不掉登录；
-//   3) logout() 即使接口失败也必须清本地（否则会卡在"看着已登录但什么都 401"）。
+// 要点：
+//   1) restore() 幂等，只跑一次；不在守卫里调 /auth/me（过期令牌由 401 拦截器踢出）
+//   2) login() 成功后同时写内存与 localStorage，F5 不掉登录
+//   3) logout() 即使接口失败也清本地
 // =============================================================================
 import { defineStore } from 'pinia'
 
@@ -19,17 +17,24 @@ export const useAuthStore = defineStore('auth', {
     user: null,
     role: '',
     restored: false,
+    /** 上次成功拉到 /auth/me 的时刻（**内存变量，不持久化**）：refreshIfStale 的节流依据 */
+    lastFetchAt: 0,
   }),
 
   getters: {
     isLoggedIn: (s) => !!s.token,
-    isAdmin: (s) => s.role === 'ADMIN',
-    displayName: (s) => s.user?.username || '',
+    displayName: (s) => s.user?.realName || s.user?.username || '',
+    username: (s) => s.user?.username || '',
     creditScore: (s) => s.user?.creditScore ?? null,
+    /** 黑名单：首页挂 notice-bar 用（主理人决策 3：不用弹窗） */
+    isBlacklisted: (s) => s.user?.status === 'BLACKLIST',
+    /** 禁用账号：守卫直接拦 */
+    isDisabled: (s) => s.user?.status === 'DISABLED',
+    status: (s) => s.user?.status || '',
   },
 
   actions: {
-    /** 从 localStorage 恢复（刷新用）。幂等：restored=true 后直接返回。 */
+    /** 从 localStorage 恢复（刷新用）。幂等。 */
     restore() {
       if (this.restored) return
       const token = localStorage.getItem(TOKEN_KEY)
@@ -39,7 +44,6 @@ export const useAuthStore = defineStore('auth', {
         try {
           this.user = JSON.parse(rawUser)
         } catch {
-          // 脏数据直接丢弃，不影响启动
           this.user = null
         }
       }
@@ -51,7 +55,7 @@ export const useAuthStore = defineStore('auth', {
      * 登录
      * @param {string} username
      * @param {string} password
-     * @returns {Promise<object>} 登录响应的 data（含 token / user / expiresAt）
+     * @returns {Promise<object>} 登录响应的 data
      */
     async login(username, password) {
       const data = await authApi.login({ username, password })
@@ -65,7 +69,6 @@ export const useAuthStore = defineStore('auth', {
       return data
     },
 
-    /** 登出：先尽力通知后端，再无条件清本地 */
     async logout() {
       try {
         await authApi.logout()
@@ -75,7 +78,6 @@ export const useAuthStore = defineStore('auth', {
       this.clear()
     },
 
-    /** 只清本地（401 拦截器也会直接调这个语义） */
     clear() {
       this.token = ''
       this.user = null
@@ -85,15 +87,48 @@ export const useAuthStore = defineStore('auth', {
       localStorage.removeItem(USER_KEY)
     },
 
-    /** 主动刷新一次用户信息（顶栏"刷新"用，可选） */
+    /** 主动刷新用户信息（一定会发请求；并发不合并，调用方自己决定要不要节流） */
     async fetchMe() {
       const me = await authApi.getMe()
       if (me) {
-        this.user = me
+        this.user = { ...(this.user || {}), ...me }
         this.role = me.role || this.role
-        localStorage.setItem(USER_KEY, JSON.stringify(me))
+        localStorage.setItem(USER_KEY, JSON.stringify(this.user))
+        this.lastFetchAt = Date.now()
       }
       return me
+    },
+
+    /**
+     * 节流刷新：距上次成功刷新超过 ttlMs 才真正请求；并发调用复用同一个 Promise。
+     *
+     * 为什么需要它：`user` 是登录那一刻的快照，管理员事后调分/拉黑不会自己同步。
+     * 但也不能见页面就发请求 —— 首页每次切回来都打一次 /auth/me 纯属浪费。
+     * 折中：**短 TTL 节流**（默认 15s）+ **并发去重**（照抄 dict.ensureLoaded 的写法）。
+     *
+     * @param {number} ttlMs 0 表示必刷（「我的」页要立刻看到新数字，不该被节流挡住）
+     * @returns {Promise<object|null>} 刷新后的 user；节流命中或失败时返回 null
+     * @note **失败静默**：本地快照足以让页面正常显示，不能因为刷新失败就报错/白屏
+     */
+    async refreshIfStale(ttlMs = 15000) {
+      const now = Date.now()
+      // ① 节流：刚刷过就直接返回（ttl=0 时恒不命中，即必刷）
+      if (this.lastFetchAt && now - this.lastFetchAt < ttlMs) {
+        return null
+      }
+      // ② 并发去重：同时多处调用只发一次请求
+      if (this._inflight) return this._inflight
+
+      this._inflight = (async () => {
+        try {
+          return await this.fetchMe()
+        } catch {
+          return null // 静默失败：继续用本地快照
+        } finally {
+          this._inflight = null
+        }
+      })()
+      return this._inflight
     },
   },
 })

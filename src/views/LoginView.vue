@@ -1,70 +1,49 @@
 <template>
-  <div class="rf-login-wrap">
-    <div class="rf-login-card">
-      <div class="rf-login-brand">
-        <el-icon :size="30"><Calendar /></el-icon>
-        <div>
-          <h1>ReserveFlow 管理后台</h1>
-          <p>预约资源管理系统 · 管理员入口</p>
-        </div>
-      </div>
+  <div class="rf-login">
+    <div class="rf-login-hd">
+      <div class="rf-login-logo">📅</div>
+      <h1>ReserveFlow 预约</h1>
+      <p>实验室仪器 · 会议室 · 储物柜</p>
+    </div>
 
-      <el-form
-        ref="formRef"
-        :model="form"
-        :rules="rules"
-        label-position="top"
-        size="large"
-        @submit.prevent="onSubmit"
-      >
-        <el-form-item label="账号" prop="username">
-          <el-input
-            v-model="form.username"
-            placeholder="请输入管理员账号"
-            autocomplete="username"
-            clearable
-            @keyup.enter="onSubmit"
-          >
-            <template #prefix><el-icon><User /></el-icon></template>
-          </el-input>
-        </el-form-item>
-
-        <el-form-item label="密码" prop="password">
-          <el-input
-            v-model="form.password"
-            type="password"
-            placeholder="请输入密码"
-            autocomplete="current-password"
-            show-password
-            @keyup.enter="onSubmit"
-          >
-            <template #prefix><el-icon><Lock /></el-icon></template>
-          </el-input>
-        </el-form-item>
-
-        <el-alert
-          v-if="errorMsg"
-          :title="errorMsg"
-          type="error"
-          :closable="false"
-          show-icon
-          style="margin-bottom: 12px"
+    <van-form class="rf-login-form" @submit="onSubmit">
+      <van-cell-group inset>
+        <van-field
+          v-model="form.username"
+          name="username"
+          label="学号"
+          placeholder="请输入学号 / 账号"
+          autocomplete="username"
+          autocapitalize="off"
+          autocorrect="off"
+          clearable
+          :rules="[{ required: true, message: '请输入学号' }]"
         />
+        <van-field
+          v-model="form.password"
+          type="password"
+          name="password"
+          label="密码"
+          placeholder="请输入密码"
+          autocomplete="current-password"
+          :rules="[{ required: true, message: '请输入密码' }]"
+        />
+      </van-cell-group>
 
-        <el-button
-          type="primary"
-          size="large"
-          style="width: 100%"
-          :loading="loading"
-          @click="onSubmit"
-        >
+      <div style="padding: 16px">
+        <van-button round block type="primary" native-type="submit" :loading="loading">
           登录
-        </el-button>
-      </el-form>
-
-      <div class="rf-login-tip">
-        演示账号：<span class="rf-mono">admin / Admin@123456</span>
+        </van-button>
       </div>
+    </van-form>
+
+    <!-- P6：注册入口 -->
+    <div class="rf-login-register">
+      还没有账号？<a href="javascript:void(0)" @click="goRegister">立即注册</a>
+    </div>
+
+    <div class="rf-login-tip">
+      演示账号：<span class="rf-mono">student01 / User@123456</span>
     </div>
   </div>
 </template>
@@ -72,69 +51,57 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { showFailToast, showSuccessToast } from 'vant'
 
 import { useAuthStore } from '../stores/auth'
 import { LOCAL_TIP } from '../constants/errorCode'
+import { LAST_USERNAME_KEY } from '../constants/storage'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 
-const formRef = ref(null)
 const loading = ref(false)
-const errorMsg = ref('')
-
-const form = reactive({
-  username: '',
-  password: '',
-})
-
-const rules = {
-  username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
-}
+const form = reactive({ username: '', password: '' })
 
 onMounted(() => {
-  // 已登录（含刷新后仍有 token）→ 直接进后台，不再显示登录页
+  // 已登录（含刷新后仍有 token）→ 直接进首页
   if (auth.token) {
-    router.replace({ name: 'dashboard' })
+    router.replace({ name: 'home' })
+    return
   }
+  // P6：注册成功后会把学号留在本地，这里自动预填，学生只需输密码
+  const last = localStorage.getItem(LAST_USERNAME_KEY)
+  if (last) form.username = last
 })
 
-async function onSubmit() {
-  if (!formRef.value) return
-  try {
-    await formRef.value.validate()
-  } catch {
-    return // 表单校验未通过，Element Plus 已在字段下提示
-  }
+function goRegister() {
+  router.push({ name: 'register' })
+}
 
+async function onSubmit() {
   loading.value = true
-  errorMsg.value = ''
   try {
     const data = await auth.login(form.username.trim(), form.password)
 
-    // 非管理员：后端允许登录，但后台禁止进入（提示明确，不说"密码错误"）
-    if (data?.user?.role !== 'ADMIN') {
+    // 禁用账号：后端若放行登录，这里也一律拒绝（守卫同样会拦）
+    if (data?.user?.status === 'DISABLED') {
       auth.clear()
-      errorMsg.value = LOCAL_TIP.notAdmin
-      ElMessage.error(LOCAL_TIP.notAdmin)
+      showFailToast(LOCAL_TIP.disabled)
       return
     }
 
-    ElMessage.success(`欢迎回来，${data?.user?.username || '管理员'}`)
+    showSuccessToast(`欢迎回来，${data?.user?.realName || data?.user?.username || ''}`)
 
-    // 回跳：优先 redirect（可带 query，如 /reservations?id=239），否则去概览
+    // 黑名单**不在这里拦**（主理人决策 3）：登录成功，首页用 notice-bar 提示
     const redirect = route.query.redirect
     if (typeof redirect === 'string' && redirect.startsWith('/')) {
       router.replace(redirect)
     } else {
-      router.replace({ name: 'dashboard' })
+      router.replace({ name: 'home' })
     }
-  } catch (e) {
-    // 后端 msg 已是可直接展示的中文（如「账号或密码错误」2000）
-    errorMsg.value = e?.msg || '登录失败，请稍后重试'
+  } catch {
+    // 后端 msg 已是中文（如「账号或密码错误」2000），拦截器已 toast
   } finally {
     loading.value = false
   }
@@ -142,46 +109,59 @@ async function onSubmit() {
 </script>
 
 <style scoped>
-.rf-login-wrap {
+.rf-login {
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #1f2d3d 0%, #2c3e50 55%, #409eff 160%);
+  background: linear-gradient(180deg, #1989fa 0%, #4aa8ff 32%, var(--rf-bg) 32%);
+  padding-top: calc(48px + var(--safe-top));
 }
 
-.rf-login-card {
-  width: 400px;
-  background: #fff;
-  border-radius: 8px;
-  padding: 32px 32px 24px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.24);
-}
-
-.rf-login-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.rf-login-hd {
+  text-align: center;
+  color: #fff;
   margin-bottom: 24px;
-  color: #1f2d3d;
 }
 
-.rf-login-brand h1 {
-  margin: 0;
-  font-size: 20px;
+.rf-login-logo {
+  font-size: 44px;
+  line-height: 1;
+}
+
+.rf-login-hd h1 {
+  margin: 10px 0 4px;
+  font-size: 21px;
   font-weight: 600;
 }
 
-.rf-login-brand p {
-  margin: 4px 0 0;
+.rf-login-hd p {
+  margin: 0;
   font-size: 12px;
-  color: #909399;
+  opacity: 0.85;
+}
+
+.rf-login-form {
+  background: #fff;
+  border-radius: 12px;
+  margin: 0 16px;
+  padding: 8px 0 4px;
+  box-shadow: 0 6px 18px rgba(25, 137, 250, 0.12);
+}
+
+.rf-login-register {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--rf-text-2);
+}
+
+.rf-login-register a {
+  color: var(--rf-primary);
+  text-decoration: none;
 }
 
 .rf-login-tip {
-  margin-top: 16px;
+  margin-top: 10px;
   text-align: center;
   font-size: 12px;
-  color: #909399;
+  color: var(--rf-text-2);
 }
 </style>
