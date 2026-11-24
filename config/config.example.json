@@ -1,0 +1,80 @@
+{
+  "_说明": "复制本文件为 config.json 后填写真实口令；config.json 已在 .gitignore 中，不会被提交",
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "threadPool": 8,
+    "debugRoot": "./web/debug"
+  },
+  "mysql": {
+    "host": "127.0.0.1",
+    "port": 3306,
+    "user": "rf",
+    "password": "请填写你的数据库口令",
+    "database": "reserveflow",
+    "poolSize": 8,
+    "charset": "utf8mb4",
+    "connectTimeoutSec": 5
+  },
+  "redis": {
+    "host": "127.0.0.1",
+    "port": 6379,
+    "password": "",
+    "timeoutMs": 1000,
+    "poolSize": 16
+  },
+  "jwt": {
+    "secret": "请替换为任意随机字符串（至少 32 字符）",
+    "ttlSeconds": 28800,
+    "issuer": "reserveflow"
+  },
+  "log": {
+    "level": "info",
+    "file": "./logs/reserveflow.log",
+    "rotateSizeMB": 10,
+    "rotateCount": 5
+  },
+  "lock": {
+    "ttlMs": 30000,
+    "renewIntervalMs": 10000,
+    "waitMs": 3000,
+    "retryIntervalMs": 30
+  },
+  "feature": {
+    "phase": 2,
+    "minCreditScore": 60,
+    "ruleEngineEnabled": true
+  },
+  "pickup": {
+    "earlyMin": 15,
+    "lateMin": 30
+  },
+  "maintenance": {
+    "enabled": true,
+    "intervalSec": 60,
+    "batchSize": 50,
+    "lockWaitMs": 500,
+    "pendingReviewTtlMin": 120,
+    "noShowDeductScore": 10,
+    "overdueDeductScore": 5,
+    "overdueDeductPeriodMin": 60,
+    "overdueDeductMaxTimes": 5,
+    "returnCheckWarnMin": 1440,
+    "damageDeductScore": 20
+  },
+  "deposit": {
+    "damageDeductRatio": 0.5,
+    "damageDeductMax": 200.0
+  },
+  "waitlist": {
+    "offerTtlMin": 15,
+    "maxPerUser": 3
+  },
+  "credit": {
+    "blacklistEnterScore": 60,
+    "blacklistExitScore": 80
+  },
+  "rule": {
+    "cacheTtlSec": 5
+  }
+}

@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ReserveFlow P0 · 接口自测台</title>
+<style>
+  :root {
+    --bg: #0f172a; --panel: #1a2332; --line: #2c3a4f; --text: #e6edf7;
+    --dim: #93a3b8; --ok: #35c26b; --bad: #ff5f6d; --accent: #4f9dff; --warn: #ffb020;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 14px/1.55 -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; }
+  header { position: sticky; top: 0; z-index: 10; background: #131c2b;
+           border-bottom: 1px solid var(--line); padding: 12px 18px; }
+  h1 { font-size: 16px; margin: 0 0 8px; font-weight: 600; letter-spacing: .3px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  input, select, textarea, button {
+    font: inherit; color: var(--text); background: #0f172a;
+    border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; outline: none;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  button { cursor: pointer; background: #22314a; transition: .15s; }
+  button:hover { background: #2c3f5e; border-color: var(--accent); }
+  button.primary { background: #1d4ed8; border-color: #2563eb; }
+  button.primary:hover { background: #2563eb; }
+  button.chip { padding: 2px 8px; font-size: 12px; background: #1b2740; }
+  main { padding: 16px 18px 60px; max-width: 1180px; margin: 0 auto; }
+  .tokenline { margin-top: 8px; font-size: 12px; color: var(--dim); word-break: break-all; }
+  .tokenline b { color: var(--ok); font-weight: 600; }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .card h2 { font-size: 13px; margin: 0 0 10px; display: flex; gap: 8px; align-items: center; }
+  .m { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; letter-spacing: .5px;
+       background: #334155; color: #cfe1ff; }
+  .m.get { background: #14532d; color: #b7f7cd; }
+  .m.post { background: #1e3a8a; color: #c7dbff; }
+  .m.put { background: #78350f; color: #ffd9a8; }
+  .m.patch { background: #4c1d95; color: #e2d4ff; }
+  .m.del { background: #7f1d1d; color: #ffd0d0; }
+  .f { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 6px; }
+  .f label { font-size: 12px; color: var(--dim); min-width: 74px; }
+  .f input[type=text], .f input[type=number] { flex: 1 1 150px; min-width: 90px; }
+  .f textarea { flex: 1 1 100%; min-height: 54px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+  pre { margin: 8px 0 0; padding: 9px 10px; border-radius: 7px; font-size: 12px;
+        font-family: ui-monospace, Consolas, "Courier New", monospace;
+        background: #0b1220; border: 1px solid var(--line); max-height: 260px; overflow: auto;
+        white-space: pre-wrap; word-break: break-word; color: var(--dim); }
+  pre.ok { border-color: #22693f; color: #b8f5cd; }
+  pre.bad { border-color: #7f1d1d; color: #ffc2c7; }
+  .hint { font-size: 12px; color: var(--dim); }
+  .sep { height: 1px; background: var(--line); margin: 10px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>ReserveFlow P0 · 接口自测台（12 个接口）</h1>
+  <div class="row">
+    <label class="hint" for="apiBase">API 前缀</label>
+    <input id="apiBase" type="text" style="width:330px" value="http://127.0.0.1:8080/api/v1" />
+    <button id="btnClearToken" class="chip">清除令牌</button>
+    <span class="hint">令牌保存在 localStorage，刷新页面不丢</span>
+  </div>
+  <div class="tokenline" id="tokenLine">当前令牌：<b>无</b></div>
+</header>
+
+<main>
+  <div class="grid">
+
+    <!-- 1 登录 -->
+    <section class="card">
+      <h2><span class="m post">POST</span> /auth/login <span class="hint">公开</span></h2>
+      <div class="f"><label>username</label><input id="loginUser" type="text" value="admin" /></div>
+      <div class="f"><label>password</label><input id="loginPwd" type="text" value="Admin@123456" /></div>
+      <div class="f">
+        <button class="primary" id="btnLogin">登录</button>
+        <button class="chip" data-account="admin|Admin@123456">admin</button>
+        <button class="chip" data-account="student01|User@123456">student01</button>
+        <button class="chip" data-account="student02|Black@123456">student02</button>
+      </div>
+      <pre id="outLogin">未请求</pre>
+    </section>
+
+    <!-- 2 登出 -->
+    <section class="card">
+      <h2><span class="m post">POST</span> /auth/logout <span class="hint">登录态</span></h2>
+      <div class="f"><span class="hint">使用当前令牌登出，令牌进入 Redis 失效名单（再用即 401）</span></div>
+      <div class="f"><button id="btnLogout">退出登录</button></div>
+      <pre id="outLogout">未请求</pre>
+    </section>
+
+    <!-- 3 当前用户 -->
+    <section class="card">
+      <h2><span class="m get">GET</span> /auth/me <span class="hint">登录态</span></h2>
+      <div class="f"><button id="btnMe">查询当前用户</button></div>
+      <pre id="outMe">未请求</pre>
+    </section>
+
+    <!-- 4 改密 -->
+    <section class="card">
+      <h2><span class="m put">PUT</span> /auth/password <span class="hint">登录态</span></h2>
+      <div class="f"><label>oldPassword</label><input id="oldPwd" type="text" value="Admin@123456" /></div>
+      <div class="f"><label>newPassword</label><input id="newPwd" type="text" value="Admin@1234567" /></div>
+      <div class="f"><button id="btnPwd">修改密码</button>
+        <span class="hint">8..64 位且不能与原密码相同；改完请改回原密码</span></div>
+      <pre id="outPwd">未请求</pre>
+    </section>
+
+    <!-- 5 探针 -->
+    <section class="card">
+      <h2><span class="m get">GET</span> /health/deps <span class="hint">公开</span></h2>
+      <div class="f"><button id="btnHealth">探测 MySQL / Redis</button>
+        <span class="hint">任一 down 接口仍 200 + code=0</span></div>
+      <pre id="outHealth">未请求</pre>
+    </section>
+
+    <!-- 6 字典 -->
+    <section class="card">
+      <h2><span class="m get">GET</span> /resources/meta <span class="hint">登录态</span></h2>
+      <div class="f"><button id="btnMeta">读取资源字典</button></div>
+      <pre id="outMeta">未请求</pre>
+    </section>
+
+    <!-- 7 列表 -->
+    <section class="card">
+      <h2><span class="m get">GET</span> /resources <span class="hint">登录态</span></h2>
+      <div class="f"><label>page</label><input id="qPage" type="number" value="1" style="max-width:90px" />
+        <label>size</label><input id="qSize" type="number" value="5" style="max-width:90px" /></div>
+      <div class="f"><label>type</label>
+        <select id="qType">
+          <option value="">（不限）</option>
+          <option value="LAB_EQUIPMENT">LAB_EQUIPMENT</option>
+          <option value="MEETING_ROOM" selected>MEETING_ROOM</option>
+          <option value="LOCKER">LOCKER</option>
+        </select>
+        <label>status</label>
+        <select id="qStatus">
+          <option value="">（不限）</option>
+          <option value="FREE">FREE</option>
+          <option value="MAINTENANCE">MAINTENANCE</option>
+        </select></div>
+      <div class="f"><label>location</label><input id="qLocation" type="text" placeholder="如 图书馆3层" />
+        <label>keyword</label><input id="qKeyword" type="text" placeholder="如 图书馆" /></div>
+      <div class="f"><button class="primary" id="btnList">检索资源</button></div>
+      <pre id="outList">未请求</pre>
+    </section>
+
+    <!-- 8 详情 -->
+    <section class="card">
+      <h2><span class="m get">GET</span> /resources/{id} <span class="hint">登录态</span></h2>
+      <div class="f"><label>id</label><input id="detailId" type="number" value="3" /></div>
+      <div class="f"><button id="btnDetail">查看详情</button></div>
+      <pre id="outDetail">未请求</pre>
+    </section>
+
+    <!-- 9 新增 -->
+    <section class="card">
+      <h2><span class="m post">POST</span> /resources <span class="hint">仅管理员</span></h2>
+      <div class="f"><label>code</label><input id="cCode" type="text" value="MR-DBG-001" />
+        <label>name</label><input id="cName" type="text" value="自测台会议室" /></div>
+      <div class="f"><label>type</label>
+        <select id="cType">
+          <option value="MEETING_ROOM" selected>MEETING_ROOM</option>
+          <option value="LAB_EQUIPMENT">LAB_EQUIPMENT</option>
+          <option value="LOCKER">LOCKER</option>
+        </select>
+        <label>location</label><input id="cLocation" type="text" value="图书馆6层" /></div>
+      <div class="f"><label>capacity</label><input id="cCapacity" type="number" value="8" style="max-width:110px" />
+        <label>deposit</label><input id="cDeposit" type="number" value="0" style="max-width:110px" /></div>
+      <div class="f"><label>description</label> <textarea id="cDesc">自测台创建，可删除</textarea></div>
+      <div class="f"><button class="primary" id="btnCreate">新增资源</button>
+        <span class="hint">重复 code → 3001；成功把 id 回填到下方两个 id 输入框</span></div>
+      <pre id="outCreate">未请求</pre>
+    </section>
+
+    <!-- 10 修改 -->
+    <section class="card">
+      <h2><span class="m put">PUT</span> /resources/{id} <span class="hint">仅管理员 · 半更新</span></h2>
+      <div class="f"><label>id</label><input id="uId" type="number" value="7" /></div>
+      <div class="f"><label>name</label><input id="uName" type="text" placeholder="留空表示不改" /></div>
+      <div class="f"><label>location</label><input id="uLocation" type="text" placeholder="留空表示不改" />
+        <label>capacity</label><input id="uCapacity" type="number" placeholder="留空表示不改" style="max-width:110px" /></div>
+      <div class="f"><button class="primary" id="btnUpdate">修改资源</button>
+        <span class="hint">只提交填写了的字段，其余保持原值</span></div>
+      <pre id="outUpdate">未请求</pre>
+    </section>
+
+    <!-- 11 删除 -->
+    <section class="card">
+      <h2><span class="m del">DELETE</span> /resources/{id} <span class="hint">仅管理员</span></h2>
+      <div class="f"><label>id</label><input id="dId" type="number" value="7" /></div>
+      <div class="f"><button class="primary" id="btnDelete">删除资源（逻辑删除）</button>
+        <span class="hint">重复删除幂等成功</span></div>
+      <pre id="outDelete">未请求</pre>
+    </section>
+
+    <!-- 12 改状态 -->
+    <section class="card">
+      <h2><span class="m patch">PATCH</span> /resources/{id}/status <span class="hint">仅管理员</span></h2>
+      <div class="f"><label>id</label><input id="sId" type="number" value="3" /></div>
+      <div class="f"><label>status</label>
+        <input id="sStatus" type="text" value="MAINTENANCE" list="statusList" />
+        <datalist id="statusList">
+          <option value="FREE"></option>
+          <option value="MAINTENANCE"></option>
+          <option value="IN_USE"></option>
+          <option value="ABC"></option>
+        </datalist>
+        <button class="chip" data-status="FREE">FREE</button>
+        <button class="chip" data-status="MAINTENANCE">MAINTENANCE</button>
+        <button class="chip" data-status="IN_USE">IN_USE(3002)</button>
+        <button class="chip" data-status="ABC">ABC(1000)</button>
+      </div>
+      <div class="f"><button class="primary" id="btnStatus">改状态</button></div>
+      <pre id="outStatus">未请求</pre>
+    </section>
+
+    <!-- ==================== P1：预约主链路（7 个接口）==================== -->
+    <!-- 说明：面板 class 为 "card p1"，与 P0 的 12 个 "card" 面板区分开，
+         保证 P0 验收脚本「/debug 含 12 个接口面板」这条断言继续成立 -->
+
+    <!-- 13 下单 -->
+    <section class="card p1">
+      <h2><span class="m post">POST</span> /reservations <span class="hint">登录态 · 下单</span></h2>
+      <div class="f"><label>resourceId</label><input id="rRes" type="number" value="4" />
+        <button class="chip" id="btnTomorrow">填入明天 09:00-10:00</button>
+      </div>
+      <div class="f"><label>startTime</label><input id="rStart" type="text" placeholder="2026-02-10T09:00:00" /></div>
+      <div class="f"><label>endTime</label><input id="rEnd" type="text" placeholder="2026-02-10T10:00:00" /></div>
+      <div class="f"><label>remark</label><input id="rRemark" type="text" placeholder="可空" /></div>
+      <div class="f"><button class="primary" id="btnResCreate">下单</button>
+        <span class="hint">会议室/储物柜直接 LOCKED；仪器进入 PENDING_REVIEW</span></div>
+      <pre id="outResCreate">未请求</pre>
+    </section>
+
+    <!-- 14 我的预约 -->
+    <section class="card p1">
+      <h2><span class="m get">GET</span> /reservations <span class="hint">登录态 · 我的预约（管理员看全部）</span></h2>
+      <div class="f"><label>page</label><input id="rqPage" type="number" value="1" />
+        <label>size</label><input id="rqSize" type="number" value="10" />
+        <label>status</label>
+        <select id="rqStatus">
+          <option value="">（全部）</option>
+          <option value="PENDING_REVIEW">PENDING_REVIEW</option>
+          <option value="LOCKED">LOCKED</option>
+          <option value="CANCELLED">CANCELLED</option>
+          <option value="REJECTED">REJECTED</option>
+        </select>
+      </div>
+      <div class="f"><button class="primary" id="btnResList">查询</button></div>
+      <pre id="outResList">未请求</pre>
+    </section>
+
+    <!-- 15 详情 -->
+    <section class="card p1">
+      <h2><span class="m get">GET</span> /reservations/{id} <span class="hint">登录态 · 本人或管理员</span></h2>
+      <div class="f"><label>id</label><input id="rId" type="number" value="1" /></div>
+      <div class="f"><button id="btnResDetail">查看详情</button></div>
+      <pre id="outResDetail">未请求</pre>
+    </section>
+
+    <!-- 16 取消 -->
+    <section class="card p1">
+      <h2><span class="m post">POST</span> /reservations/{id}/cancel <span class="hint">登录态 · 本人或管理员</span></h2>
+      <div class="f"><label>id</label><input id="rcId" type="number" value="1" /></div>
+      <div class="f"><label>reason</label><input id="rcReason" type="text" placeholder="可空，例如：行程冲突" /></div>
+      <div class="f"><button class="primary" id="btnResCancel">取消预约</button>
+        <span class="hint">已锁定单只有「当前时间 &lt; 开始时间」才允许</span></div>
+      <pre id="outResCancel">未请求</pre>
+    </section>
+
+    <!-- 17 审核通过 -->
+    <section class="card p1">
+      <h2><span class="m post">POST</span> /reservations/{id}/approve <span class="hint">仅管理员</span></h2>
+      <div class="f"><label>id</label><input id="raId" type="number" value="1" />
+        <label>remark</label><input id="raRemark" type="text" placeholder="可空" /></div>
+      <div class="f"><button class="primary" id="btnResApprove">审核通过</button>
+        <span class="hint">PENDING_REVIEW → LOCKED</span></div>
+      <pre id="outResApprove">未请求</pre>
+    </section>
+
+    <!-- 18 驳回 -->
+    <section class="card p1">
+      <h2><span class="m post">POST</span> /reservations/{id}/reject <span class="hint">仅管理员</span></h2>
+      <div class="f"><label>id</label><input id="rjId" type="number" value="1" />
+        <label>reason</label><input id="rjReason" type="text" placeholder="例如：设备检修" /></div>
+      <div class="f"><button class="primary" id="btnResReject">驳回</button>
+        <span class="hint">PENDING_REVIEW → REJECTED 并释放时段</span></div>
+      <pre id="outResReject">未请求</pre>
+    </section>
+
+    <!-- 19 查占用 -->
+    <section class="card p1">
+      <h2><span class="m get">GET</span> /resources/{id}/slots <span class="hint">登录态 · 查时段占用</span></h2>
+      <div class="f"><label>resourceId</label><input id="rsRes" type="number" value="4" />
+        <label>date</label><input id="rsDate" type="text" placeholder="2026-02-10" />
+        <button class="chip" id="btnTomorrowSlots">明天</button></div>
+      <div class="f"><button class="primary" id="btnResSlots">查询占用</button></div>
+      <pre id="outResSlots">未请求</pre>
+    </section>
+
+    <!-- ==================== P2：取用/归还/验收/损坏/押金/候补/维护 ==================== -->
+    <!-- 面板 class 为 "card p2"，与 P0 的 "card"、P1 的 "card p1" 区分开 -->
+
+    <!-- 20 取用 -->
+    <section class="card p2">
+      <h2><span class="m post">POST</span> /reservations/{id}/pickup <span class="hint">登录态 · 取用</span></h2>
+      <div class="f"><label>id</label><input id="pkId" type="number" value="1" />
+        <button class="chip" id="btnPkFill">用上单个 id</button></div>
+      <div class="f"><button class="primary" id="btnPickup">取用</button>
+        <span class="hint">时间窗：开始前 15 分钟 ~ 开始后 30 分钟</span></div>
+      <pre id="outPickup">未请求</pre>
+    </section>
+
+    <!-- 21 归还 -->
+    <section class="card p2">
+      <h2><span class="m post">POST</span> /reservations/{id}/return <span class="hint">登录态 · 归还</span></h2>
+      <div class="f"><label>id</label><input id="rbId" type="number" value="1" />
+        <label>remark</label><input id="rbRemark" type="text" placeholder="可空" /></div>
+      <div class="f"><button class="primary" id="btnReturn">归还</button>
+        <span class="hint">IN_USE / DUE_RETURN → RETURN_CHECK，同时释放槽位</span></div>
+      <pre id="outReturn">未请求</pre>
+    </section>
+
+    <!-- 22 验收 -->
+    <section class="card p2">
+      <h2><span class="m post">POST</span> /reservations/{id}/accept <span class="hint">仅管理员 · 验收通过</span></h2>
+      <div class="f"><label>id</label><input id="acId" type="number" value="1" />
+        <label>remark</label><input id="acRemark" type="text" placeholder="可空" /></div>
+      <div class="f"><button class="primary" id="btnAccept">验收通过</button>
+        <span class="hint">COMPLETED + 资源 FREE + 押金退还</span></div>
+      <pre id="outAccept">未请求</pre>
+    </section>
+
+    <!-- 23 损坏 -->
+    <section class="card p2">
+      <h2><span class="m post">POST</span> /reservations/{id}/damage <span class="hint">仅管理员 · 损坏结案</span></h2>
+      <div class="f"><label>id</label><input id="dmId" type="number" value="1" />
+        <label>deductAmount</label><input id="dmAmount" type="text" placeholder="留空=按比例" /></div>
+      <div class="f"><label>reason</label><input id="dmReason" type="text" placeholder="例如：镜筒磕碰" /></div>
+      <div class="f"><button class="primary" id="btnDamage">损坏结案</button>
+        <span class="hint">资源 → DAMAGE_CLAIM，扣减 + 退剩余 + 扣信用分</span></div>
+      <pre id="outDamage">未请求</pre>
+    </section>
+
+    <!-- 24 押金流水 -->
+    <section class="card p2">
+      <h2><span class="m get">GET</span> /reservations/{id}/deposits <span class="hint">登录态 · 押金流水</span></h2>
+      <div class="f"><label>id</label><input id="dpId" type="number" value="1" /></div>
+      <div class="f"><button class="primary" id="btnDeposits">查流水</button></div>
+      <pre id="outDeposits">未请求</pre>
+    </section>
+
+    <!-- 25 加入候补 -->
+    <section class="card p2">
+      <h2><span class="m post">POST</span> /resources/{id}/waitlist <span class="hint">登录态 · 加入候补</span></h2>
+      <div class="f"><label>resourceId</label><input id="wjRes" type="number" value="4" />
+        <button class="chip" id="btnWjTomorrow">填入明天 09:00-10:00</button></div>
+      <div class="f"><label>startTime</label><input id="wjStart" type="text" placeholder="2026-02-10T09:00:00" /></div>
+      <div class="f"><label>endTime</label><input id="wjEnd" type="text" placeholder="2026-02-10T10:00:00" /></div>
+      <div class="f"><button class="primary" id="btnJoinWait">加入候补</button></div>
+      <pre id="outJoinWait">未请求</pre>
+    </section>
+
+    <!-- 26 我的候补 -->
+    <section class="card p2">
+      <h2><span class="m get">GET</span> /waitlist <span class="hint">登录态 · 我的候补</span></h2>
+      <div class="f"><label>status</label>
+        <select id="wqStatus">
+          <option value="">（全部）</option>
+          <option value="WAITING">WAITING</option>
+          <option value="OFFERED">OFFERED</option>
+          <option value="CONVERTED">CONVERTED</option>
+          <option value="CANCELLED">CANCELLED</option>
+          <option value="EXPIRED">EXPIRED</option>
+        </select></div>
+      <div class="f"><button class="primary" id="btnWaitList">查询</button></div>
+      <pre id="outWaitList">未请求</pre>
+    </section>
+
+    <!-- 27 确认 offer -->
+    <section class="card p2">
+      <h2><span class="m post">POST</span> /waitlist/{id}/confirm <span class="hint">登录态 · 确认候补名额</span></h2>
+      <div class="f"><label>id</label><input id="wcId" type="number" value="1" />
+        <span class="hint">15 分钟内确认，否则名额转给下一位</span></div>
+      <div class="f"><button class="primary" id="btnWaitConfirm">确认转正</button></div>
+      <pre id="outWaitConfirm">未请求</pre>
+    </section>
+
+    <!-- 28 退出候补 -->
+    <section class="card p2">
+      <h2><span class="m del">DELETE</span> /waitlist/{id} <span class="hint">登录态 · 退出候补</span></h2>
+      <div class="f"><label>id</label><input id="wlId" type="number" value="1" />
+        <button class="chip" id="btnWlFill">用上一条 id</button></div>
+      <div class="f"><button class="primary" id="btnWaitLeave">退出候补</button></div>
+      <pre id="outWaitLeave">未请求</pre>
+    </section>
+
+    <!-- 29 手动跑维护 -->
+    <section class="card p2">
+      <h2><span class="m post">POST</span> /admin/jobs/maintenance <span class="hint">仅管理员 · 手动跑一轮</span></h2>
+      <div class="f"><button class="primary" id="btnMaint">立即扫描一轮</button>
+        <span class="hint">待审核超时 / 爽约 / 逾期 / offer 过期 / RETURN_CHECK 告警</span></div>
+      <pre id="outMaint">未请求</pre>
+    </section>
+
+    <!-- ==================== P3：规则管理 / 信用体系 ==================== -->
+    <!-- 面板 class 为 "card p3"，与 P0 的 "card"、P1 的 "card p1"、P2 的 "card p2" 区分开 -->
+
+    <!-- 30 规则列表 -->
+    <section class="card p3">
+      <h2><span class="m get">GET</span> /admin/rules <span class="hint">仅管理员 · 规则表</span></h2>
+      <div class="f"><label>phase</label>
+        <select id="rlPhase"><option value="">（全部）</option><option value="CREATE">CREATE</option>
+          <option value="TIMER">TIMER</option><option value="SETTLE">SETTLE</option></select>
+        <label>enabled</label>
+        <select id="rlEnabled"><option value="">（全部）</option><option value="1">启用</option>
+          <option value="0">停用</option></select></div>
+      <div class="f"><button class="primary" id="btnRuleList">查规则</button>
+        <span class="hint">改完规则立即生效（写后主动 reload）</span></div>
+      <pre id="outRuleList">未请求</pre>
+    </section>
+
+    <!-- 31 启停 -->
+    <section class="card p3">
+      <h2><span class="m patch">PATCH</span> /admin/rules/{id}/enabled <span class="hint">仅管理员 · 启停</span></h2>
+      <div class="f"><label>id</label><input id="reId" type="number" value="1" />
+        <label>enabled</label>
+        <select id="reVal"><option value="true">true（启用）</option><option value="false">false（停用）</option></select></div>
+      <div class="f"><button class="primary" id="btnRuleEnabled">应用</button>
+        <span class="hint">停用 #1 黑名单拦截 → 黑名单用户可下单</span></div>
+      <pre id="outRuleEnabled">未请求</pre>
+    </section>
+
+    <!-- 32 改优先级 -->
+    <section class="card p3">
+      <h2><span class="m patch">PATCH</span> /admin/rules/{id}/priority <span class="hint">仅管理员 · 排序</span></h2>
+      <div class="f"><label>id</label><input id="rpId" type="number" value="6" />
+        <label>priority</label><input id="rpVal" type="number" value="45" /></div>
+      <div class="f"><button class="primary" id="btnRulePriority">应用</button>
+        <span class="hint">升序求值：数字越小越先判</span></div>
+      <pre id="outRulePriority">未请求</pre>
+    </section>
+
+    <!-- 33 我的信用 -->
+    <section class="card p3">
+      <h2><span class="m get">GET</span> /credit/me + /credit/me/logs <span class="hint">登录态 · 信用体系</span></h2>
+      <div class="f"><label>reasonType</label>
+        <select id="clReason"><option value="">（全部）</option><option value="NO_SHOW">NO_SHOW</option>
+          <option value="OVERDUE">OVERDUE</option><option value="DAMAGE">DAMAGE</option>
+          <option value="MANUAL">MANUAL</option><option value="AUTO_BLACKLIST">AUTO_BLACKLIST</option>
+          <option value="AUTO_RECOVER">AUTO_RECOVER</option></select></div>
+      <div class="f"><button class="primary" id="btnCreditMe">查我的信用</button>
+        <button id="btnCreditLogs">查变动明细</button></div>
+      <pre id="outCreditMe">未请求</pre>
+      <pre id="outCreditLogs">未请求</pre>
+    </section>
+
+    <!-- 34 管理员调整信用分 -->
+    <section class="card p3">
+      <h2><span class="m post">POST</span> /admin/credit/{userId}/adjust <span class="hint">仅管理员</span></h2>
+      <div class="f"><label>userId</label><input id="caId" type="number" value="2" />
+        <label>changeScore</label><input id="caScore" type="number" value="10" /></div>
+      <div class="f"><label>reason</label><input id="caReason" type="text" placeholder="例如：申诉通过，恢复 10 分" /></div>
+      <div class="f"><button class="primary" id="btnCreditAdjust">调整</button>
+        <span class="hint">写 MANUAL 明细；跌到 60 以下自动进黑名单、回到 80 自动解除</span></div>
+      <pre id="outCreditAdjust">未请求</pre>
+    </section>
+
+  </div>
+
+  </div>
+
+  </div>
+  <div class="sep"></div>
+  <p class="hint">
+    说明：业务失败一律 HTTP 200 + code≠0（例如 3001 编号重复、3002 状态不允许）；
+    只有鉴权/框架层用 401 / 403 / 404 / 405 / 500。响应体统一 <code>{code, msg, data}</code>。
+  </p>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var TOKEN_KEY = "rf_debug_token";
+  var token = localStorage.getItem(TOKEN_KEY) || "";
+
+  function el(id) { return document.getElementById(id); }
+  function apiBase() {
+    var v = el("apiBase").value.trim();
+    return v.replace(/\/+$/, "");
+  }
+
+  function renderToken() {
+    var box = el("tokenLine");
+    if (!token) {
+      box.innerHTML = "当前令牌：<b>无</b>";
+    } else {
+      var head = token.slice(0, 18);
+      box.innerHTML = "当前令牌：<b>" + head + "…</b>（长度 " + token.length + "）";
+    }
+  }
+
+  function setToken(t) {
+    token = t || "";
+    if (token) { localStorage.setItem(TOKEN_KEY, token); }
+    else { localStorage.removeItem(TOKEN_KEY); }
+    renderToken();
+  }
+
+  function stamp() {
+    var d = new Date();
+    function p(n) { return (n < 10 ? "0" : "") + n; }
+    return p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+  }
+
+  function show(outId, status, payload) {
+    var pre = el(outId);
+    var text;
+    if (typeof payload === "string") { text = payload; }
+    else { text = JSON.stringify(payload, null, 2); }
+    var bizOk = (typeof payload === "object" && payload !== null && payload.code === 0);
+    var ok = status >= 200 && status < 300 && (payload === null || typeof payload !== "object" ||
+                                               payload === undefined || bizOk);
+    pre.textContent = "HTTP " + status + "   [" + stamp() + "]\n" + text;
+    pre.className = ok ? "ok" : "bad";
+  }
+
+  function showError(outId, msg) {
+    var pre = el(outId);
+    pre.textContent = "请求失败（未拿到响应）  [" + stamp() + "]\n" + msg +
+      "\n\n排查：服务是否已启动？API 前缀是否正确？若页面以 file:// 打开，" +
+      "服务端已开 CORS（Access-Control-Allow-Origin: *）。";
+    pre.className = "bad";
+  }
+
+  function request(method, path, body, outId) {
+    var url = apiBase() + path;
+    var opt = { method: method, headers: {} };
+    if (token) { opt.headers["Authorization"] = "Bearer " + token; }
+    if (body !== undefined && body !== null) {
+      opt.headers["Content-Type"] = "application/json; charset=utf-8";
+      opt.body = JSON.stringify(body);
+    }
+    var pre = el(outId);
+    pre.textContent = "请求中…";
+    pre.className = "";
+    return fetch(url, opt).then(function (res) {
+      return res.text().then(function (text) {
+        var parsed;
+        try { parsed = text ? JSON.parse(text) : {}; }
+        catch (e) { parsed = text; }
+        show(outId, res.status, parsed);
+        return { status: res.status, body: parsed };
+      });
+    }).catch(function (err) {
+      showError(outId, String(err && err.message ? err.message : err));
+      return { status: 0, body: null };
+    });
+  }
+
+  function intOrEmpty(id) {
+    var v = el(id).value.trim();
+    if (v === "") { return null; }
+    var n = Number(v);
+    return isNaN(n) ? null : n;
+  }
+
+  function strOrEmpty(id) {
+    var v = el(id).value.trim();
+    return v === "" ? null : v;
+  }
+
+  // ---- 1 登录
+  function doLogin() {
+    request("POST", "/auth/login", {
+      username: el("loginUser").value.trim(),
+      password: el("loginPwd").value
+    }, "outLogin").then(function (r) {
+      if (r.body && r.body.code === 0 && r.body.data && r.body.data.token) {
+        setToken(r.body.data.token);
+      } else {
+        // 登录失败不得写入令牌（PRD 验收 #7）
+        el("tokenLine").innerHTML = "当前令牌：<b>无</b>（登录失败，未写入）";
+      }
+    });
+  }
+
+  el("btnLogin").addEventListener("click", doLogin);
+  Array.prototype.forEach.call(document.querySelectorAll("button.chip[data-account]"), function (b) {
+    b.addEventListener("click", function () {
+      var parts = b.getAttribute("data-account").split("|");
+      el("loginUser").value = parts[0];
+      el("loginPwd").value = parts[1];
+    });
+  });
+
+  // ---- 2 登出
+  el("btnLogout").addEventListener("click", function () {
+    request("POST", "/auth/logout", undefined, "outLogout").then(function (r) {
+      if (r.body && r.body.code === 0) { setToken(""); }
+    });
+  });
+
+  // ---- 3 当前用户
+  el("btnMe").addEventListener("click", function () {
+    request("GET", "/auth/me", undefined, "outMe");
+  });
+
+  // ---- 4 改密
+  el("btnPwd").addEventListener("click", function () {
+    request("PUT", "/auth/password", {
+      oldPassword: el("oldPwd").value,
+      newPassword: el("newPwd").value
+    }, "outPwd");
+  });
+
+  // ---- 5 探针
+  el("btnHealth").addEventListener("click", function () {
+    request("GET", "/health/deps", undefined, "outHealth");
+  });
+
+  // ---- 6 字典
+  el("btnMeta").addEventListener("click", function () {
+    request("GET", "/resources/meta", undefined, "outMeta");
+  });
+
+  // ---- 7 列表
+  el("btnList").addEventListener("click", function () {
+    var qs = [];
+    var page = intOrEmpty("qPage");
+    var size = intOrEmpty("qSize");
+    if (page !== null) { qs.push("page=" + encodeURIComponent(page)); }
+    if (size !== null) { qs.push("size=" + encodeURIComponent(size)); }
+    if (el("qType").value) { qs.push("type=" + encodeURIComponent(el("qType").value)); }
+    if (el("qStatus").value) { qs.push("status=" + encodeURIComponent(el("qStatus").value)); }
+    var loc = strOrEmpty("qLocation");
+    if (loc) { qs.push("location=" + encodeURIComponent(loc)); }
+    var kw = strOrEmpty("qKeyword");
+    if (kw) { qs.push("keyword=" + encodeURIComponent(kw)); }
+    request("GET", "/resources" + (qs.length ? "?" + qs.join("&") : ""), undefined, "outList");
+  });
+
+  // ---- 8 详情
+  el("btnDetail").addEventListener("click", function () {
+    var id = intOrEmpty("detailId");
+    if (id === null) { showError("outDetail", "id 不能为空"); return; }
+    request("GET", "/resources/" + id, undefined, "outDetail");
+  });
+
+  // ---- 9 新增
+  el("btnCreate").addEventListener("click", function () {
+    var body = {
+      code: el("cCode").value.trim(),
+      name: el("cName").value.trim(),
+      type: el("cType").value,
+      location: el("cLocation").value.trim(),
+      capacity: intOrEmpty("cCapacity") === null ? 1 : intOrEmpty("cCapacity"),
+      depositAmount: intOrEmpty("cDeposit") === null ? 0 : Number(el("cDeposit").value),
+      description: el("cDesc").value
+    };
+    request("POST", "/resources", body, "outCreate").then(function (r) {
+      if (r.body && r.body.code === 0 && r.body.data && r.body.data.id) {
+        el("uId").value = r.body.data.id;
+        el("dId").value = r.body.data.id;
+        el("sId").value = r.body.data.id;
+        el("detailId").value = r.body.data.id;
+      }
+    });
+  });
+
+  // ---- 10 修改（半更新：只提交填写的字段）
+  el("btnUpdate").addEventListener("click", function () {
+    var id = intOrEmpty("uId");
+    if (id === null) { showError("outUpdate", "id 不能为空"); return; }
+    var body = {};
+    var name = strOrEmpty("uName");
+    if (name !== null) { body.name = name; }
+    var loc = strOrEmpty("uLocation");
+    if (loc !== null) { body.location = loc; }
+    var cap = intOrEmpty("uCapacity");
+    if (cap !== null) { body.capacity = cap; }
+    request("PUT", "/resources/" + id, body, "outUpdate");
+  });
+
+  // ---- 11 删除
+  el("btnDelete").addEventListener("click", function () {
+    var id = intOrEmpty("dId");
+    if (id === null) { showError("outDelete", "id 不能为空"); return; }
+    request("DELETE", "/resources/" + id, undefined, "outDelete");
+  });
+
+  // ---- 12 改状态
+  function doStatus() {
+    var id = intOrEmpty("sId");
+    if (id === null) { showError("outStatus", "id 不能为空"); return; }
+    request("PATCH", "/resources/" + id + "/status",
+            { status: el("sStatus").value.trim() }, "outStatus");
+  }
+  el("btnStatus").addEventListener("click", doStatus);
+  Array.prototype.forEach.call(document.querySelectorAll("button.chip[data-status]"), function (b) {
+    b.addEventListener("click", function () {
+      el("sStatus").value = b.getAttribute("data-status");
+      doStatus();
+    });
+  });
+
+  el("btnClearToken").addEventListener("click", function () {
+    setToken("");
+    el("tokenLine").innerHTML = "当前令牌：<b>无</b>（已清除）";
+  });
+
+  // ==================== P1：预约主链路 ====================
+  function dateAfter(days) {
+    var d = new Date(Date.now() + days * 86400000);
+    function p(n) { return (n < 10 ? "0" : "") + n; }
+    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+  }
+  function isoAt(dateStr, hhmm) { return dateStr + "T" + hhmm + ":00"; }
+
+  function fillTomorrow() {
+    var d = dateAfter(1);
+    el("rStart").value = isoAt(d, "09:00");
+    el("rEnd").value = isoAt(d, "10:00");
+    el("rsDate").value = d;
+  }
+  el("btnTomorrow").addEventListener("click", fillTomorrow);
+  el("btnTomorrowSlots").addEventListener("click", function () {
+    el("rsDate").value = dateAfter(1);
+  });
+  fillTomorrow();
+
+  function syncResIds(id) {
+    if (!id) { return; }
+    el("rId").value = id;
+    el("rcId").value = id;
+    el("raId").value = id;
+    el("rjId").value = id;
+  }
+
+  // ---- 13 下单
+  el("btnResCreate").addEventListener("click", function () {
+    var res = intOrEmpty("rRes");
+    if (res === null) { showError("outResCreate", "resourceId 不能为空"); return; }
+    var body = {
+      resourceId: res,
+      startTime: el("rStart").value.trim(),
+      endTime: el("rEnd").value.trim()
+    };
+    var rm = strOrEmpty("rRemark");
+    if (rm) { body.remark = rm; }
+    request("POST", "/reservations", body, "outResCreate").then(function (r) {
+      if (r.body && r.body.code === 0 && r.body.data) {
+        syncResIds(r.body.data.id);
+        el("rsRes").value = r.body.data.resourceId;
+        el("rsDate").value = r.body.data.slotDate;
+        // 下单成功后自动刷新占用图，衔接「下单 → 查占用 → 取消」
+        request("GET", "/resources/" + r.body.data.resourceId + "/slots?date=" +
+                r.body.data.slotDate, undefined, "outResSlots");
+      }
+    });
+  });
+
+  // ---- 14 我的预约
+  el("btnResList").addEventListener("click", function () {
+    var page = intOrEmpty("rqPage");
+    var size = intOrEmpty("rqSize");
+    var qs = ["page=" + (page === null ? 1 : page), "size=" + (size === null ? 10 : size)];
+    if (el("rqStatus").value) { qs.push("status=" + encodeURIComponent(el("rqStatus").value)); }
+    request("GET", "/reservations?" + qs.join("&"), undefined, "outResList");
+  });
+
+  // ---- 15 详情
+  el("btnResDetail").addEventListener("click", function () {
+    var id = intOrEmpty("rId");
+    if (id === null) { showError("outResDetail", "id 不能为空"); return; }
+    request("GET", "/reservations/" + id, undefined, "outResDetail");
+  });
+
+  // ---- 16 取消
+  el("btnResCancel").addEventListener("click", function () {
+    var id = intOrEmpty("rcId");
+    if (id === null) { showError("outResCancel", "id 不能为空"); return; }
+    var body = {};
+    var reason = strOrEmpty("rcReason");
+    if (reason) { body.reason = reason; }
+    request("POST", "/reservations/" + id + "/cancel", body, "outResCancel")
+      .then(function (r) {
+        if (r.body && r.body.code === 0) {
+          // 取消后刷新占用图，直观看到槽位被释放
+          var d = el("rsDate").value.trim();
+          var res = intOrEmpty("rsRes");
+          if (d && res !== null) {
+            request("GET", "/resources/" + res + "/slots?date=" + d, undefined, "outResSlots");
+          }
+        }
+      });
+  });
+
+  // ---- 17 审核通过
+  el("btnResApprove").addEventListener("click", function () {
+    var id = intOrEmpty("raId");
+    if (id === null) { showError("outResApprove", "id 不能为空"); return; }
+    var body = {};
+    var remark = strOrEmpty("raRemark");
+    if (remark) { body.remark = remark; }
+    request("POST", "/reservations/" + id + "/approve", body, "outResApprove");
+  });
+
+  // ---- 18 驳回
+  el("btnResReject").addEventListener("click", function () {
+    var id = intOrEmpty("rjId");
+    if (id === null) { showError("outResReject", "id 不能为空"); return; }
+    var body = {};
+    var reason = strOrEmpty("rjReason");
+    if (reason) { body.reason = reason; }
+    request("POST", "/reservations/" + id + "/reject", body, "outResReject");
+  });
+
+  // ---- 19 查占用
+  el("btnResSlots").addEventListener("click", function () {
+    var res = intOrEmpty("rsRes");
+    if (res === null) { showError("outResSlots", "resourceId 不能为空"); return; }
+    var date = el("rsDate").value.trim();
+    if (!date) { showError("outResSlots", "date 不能为空（yyyy-MM-dd）"); return; }
+    request("GET", "/resources/" + res + "/slots?date=" + date, undefined, "outResSlots");
+  });
+
+
+  // ==================== P2：闭环 / 押金 / 候补 / 维护 ====================
+  var lastResId = null;
+  var lastWaitId = null;
+
+  function fillP2Tomorrow() {
+    var d = dateAfter(1);
+    el("wjStart").value = isoAt(d, "09:00");
+    el("wjEnd").value = isoAt(d, "10:00");
+  }
+  el("btnWjTomorrow").addEventListener("click", fillP2Tomorrow);
+  fillP2Tomorrow();
+
+  el("btnPkFill").addEventListener("click", function () {
+    if (lastResId) { el("pkId").value = lastResId; }
+  });
+  el("btnWlFill").addEventListener("click", function () {
+    if (lastWaitId) { el("wlId").value = lastWaitId; }
+  });
+
+  function requireId(inputId, outId, label) {
+    var v = intOrEmpty(inputId);
+    if (v === null) { showError(outId, label + " 不能为空"); return null; }
+    return v;
+  }
+
+  // ---- 20 取用
+  el("btnPickup").addEventListener("click", function () {
+    var id = requireId("pkId", "outPickup", "id");
+    if (id === null) { return; }
+    request("POST", "/reservations/" + id + "/pickup", {}, "outPickup");
+  });
+
+  // ---- 21 归还
+  el("btnReturn").addEventListener("click", function () {
+    var id = requireId("rbId", "outReturn", "id");
+    if (id === null) { return; }
+    var body = {};
+    var rm = strOrEmpty("rbRemark");
+    if (rm) { body.remark = rm; }
+    request("POST", "/reservations/" + id + "/return", body, "outReturn");
+  });
+
+  // ---- 22 验收
+  el("btnAccept").addEventListener("click", function () {
+    var id = requireId("acId", "outAccept", "id");
+    if (id === null) { return; }
+    var body = {};
+    var rm = strOrEmpty("acRemark");
+    if (rm) { body.remark = rm; }
+    request("POST", "/reservations/" + id + "/accept", body, "outAccept");
+  });
+
+  // ---- 23 损坏
+  el("btnDamage").addEventListener("click", function () {
+    var id = requireId("dmId", "outDamage", "id");
+    if (id === null) { return; }
+    var body = {};
+    var amt = strOrEmpty("dmAmount");
+    if (amt !== null) {
+      var n = Number(amt);
+      if (isNaN(n) || n < 0) { showError("outDamage", "deductAmount 必须是非负数"); return; }
+      body.deductAmount = n;
+    }
+    var rs = strOrEmpty("dmReason");
+    if (rs) { body.reason = rs; }
+    request("POST", "/reservations/" + id + "/damage", body, "outDamage");
+  });
+
+  // ---- 24 押金流水
+  el("btnDeposits").addEventListener("click", function () {
+    var id = requireId("dpId", "outDeposits", "id");
+    if (id === null) { return; }
+    request("GET", "/reservations/" + id + "/deposits", undefined, "outDeposits");
+  });
+
+  // ---- 25 加入候补
+  el("btnJoinWait").addEventListener("click", function () {
+    var res = requireId("wjRes", "outJoinWait", "resourceId");
+    if (res === null) { return; }
+    request("POST", "/resources/" + res + "/waitlist", {
+      startTime: el("wjStart").value.trim(),
+      endTime: el("wjEnd").value.trim()
+    }, "outJoinWait").then(function (r) {
+      if (r.body && r.body.code === 0 && r.body.data) {
+        lastWaitId = r.body.data.id;
+        el("wcId").value = lastWaitId;
+        el("wlId").value = lastWaitId;
+      }
+    });
+  });
+
+  // ---- 26 我的候补
+  el("btnWaitList").addEventListener("click", function () {
+    var qs = [];
+    if (el("wqStatus").value) { qs.push("status=" + encodeURIComponent(el("wqStatus").value)); }
+    request("GET", "/waitlist" + (qs.length ? "?" + qs.join("&") : ""), undefined, "outWaitList")
+      .then(function (r) {
+        if (r.body && r.body.code === 0 && r.body.data && r.body.data.list.length) {
+          lastWaitId = r.body.data.list[0].id;
+        }
+      });
+  });
+
+  // ---- 27 确认 offer
+  el("btnWaitConfirm").addEventListener("click", function () {
+    var id = requireId("wcId", "outWaitConfirm", "id");
+    if (id === null) { return; }
+    request("POST", "/waitlist/" + id + "/confirm", {}, "outWaitConfirm").then(function (r) {
+      if (r.body && r.body.code === 0 && r.body.data && r.body.data.convertedReservationId) {
+        lastResId = r.body.data.convertedReservationId;
+        el("pkId").value = lastResId;
+        el("dpId").value = lastResId;
+      }
+    });
+  });
+
+  // ---- 28 退出候补
+  el("btnWaitLeave").addEventListener("click", function () {
+    var id = requireId("wlId", "outWaitLeave", "id");
+    if (id === null) { return; }
+    request("DELETE", "/waitlist/" + id, undefined, "outWaitLeave");
+  });
+
+  // ---- 29 手动跑维护
+  el("btnMaint").addEventListener("click", function () {
+    request("POST", "/admin/jobs/maintenance", {}, "outMaint");
+  });
+
+
+  // ==================== P3：规则管理 / 信用体系 ====================
+  // ---- 30 规则列表
+  el("btnRuleList").addEventListener("click", function () {
+    var qs = [];
+    if (el("rlPhase").value) { qs.push("phase=" + encodeURIComponent(el("rlPhase").value)); }
+    if (el("rlEnabled").value !== "") { qs.push("enabled=" + encodeURIComponent(el("rlEnabled").value)); }
+    request("GET", "/admin/rules" + (qs.length ? "?" + qs.join("&") : ""), undefined, "outRuleList")
+      .then(function (r) {
+        if (r.body && r.body.code === 0 && r.body.data && r.body.data.list.length) {
+          var first = r.body.data.list[0].id;
+          if (!el("reId").value) { el("reId").value = first; }
+          if (!el("rpId").value) { el("rpId").value = first; }
+        }
+      });
+  });
+
+  // ---- 31 启停
+  el("btnRuleEnabled").addEventListener("click", function () {
+    var id = requireId("reId", "outRuleEnabled", "id");
+    if (id === null) { return; }
+    request("PATCH", "/admin/rules/" + id + "/enabled",
+            { enabled: el("reVal").value === "true" }, "outRuleEnabled");
+  });
+
+  // ---- 32 改优先级
+  el("btnRulePriority").addEventListener("click", function () {
+    var id = requireId("rpId", "outRulePriority", "id");
+    if (id === null) { return; }
+    var v = intOrEmpty("rpVal");
+    if (v === null) { showError("outRulePriority", "priority 不能为空"); return; }
+    request("PATCH", "/admin/rules/" + id + "/priority", { priority: v }, "outRulePriority");
+  });
+
+  // ---- 33 我的信用 / 明细
+  el("btnCreditMe").addEventListener("click", function () {
+    request("GET", "/credit/me", undefined, "outCreditMe");
+  });
+  el("btnCreditLogs").addEventListener("click", function () {
+    var qs = [];
+    if (el("clReason").value) { qs.push("reasonType=" + encodeURIComponent(el("clReason").value)); }
+    request("GET", "/credit/me/logs?page=1&size=10" + (qs.length ? "&" + qs.join("&") : ""),
+            undefined, "outCreditLogs");
+  });
+
+  // ---- 34 管理员调整信用分
+  el("btnCreditAdjust").addEventListener("click", function () {
+    var uid = requireId("caId", "outCreditAdjust", "userId");
+    if (uid === null) { return; }
+    var sc = intOrEmpty("caScore");
+    if (sc === null || sc === 0) { showError("outCreditAdjust", "changeScore 不能为空且不能为 0"); return; }
+    var reason = strOrEmpty("caReason");
+    if (!reason) { showError("outCreditAdjust", "reason 必填"); return; }
+    request("POST", "/admin/credit/" + uid + "/adjust",
+            { changeScore: sc, reason: reason }, "outCreditAdjust");
+  });
+
+  renderToken();
+})();
+</script>
+</body>
+</html>
